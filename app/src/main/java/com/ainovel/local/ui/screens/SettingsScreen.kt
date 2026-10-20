@@ -17,12 +17,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -49,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -64,6 +67,8 @@ import com.ainovel.local.data.remote.ProviderCatalog
 import com.ainovel.local.data.remote.ProviderDefinition
 import com.ainovel.local.data.remote.ReasoningStrength
 import com.ainovel.local.data.remote.ProviderModel
+import com.ainovel.local.data.remote.VertexAiServiceAccountAuth
+import com.ainovel.local.domain.EpubExporter
 import kotlinx.serialization.json.Json
 import com.ainovel.local.ui.AppViewModel
 import com.ainovel.local.ui.localization.AppLanguage
@@ -132,7 +137,7 @@ fun SettingsScreen(
             }
             item { InstructionSection(viewModel) }
         }
-        item { BackupSection(viewModel, rollbackAvailable, busy) }
+        item { BackupSection(viewModel, workspace.novel?.name, rollbackAvailable, busy) }
     }
 }
 
@@ -172,6 +177,7 @@ private fun LanguageSection(
 
 @Composable
 private fun ProviderSection(viewModel: AppViewModel, providers: List<ProviderConfigEntity>, busy: Boolean) {
+    val context = LocalContext.current
     var selectedProviderId by remember { mutableStateOf("deepseek") }
     val definition = ProviderCatalog.find(selectedProviderId) ?: ProviderCatalog.definitions.first()
     val provider = providers.firstOrNull { it.providerId == selectedProviderId }
@@ -179,6 +185,59 @@ private fun ProviderSection(viewModel: AppViewModel, providers: List<ProviderCon
     var baseUrl by remember(selectedProviderId, provider?.baseUrl) { mutableStateOf(provider?.baseUrl ?: definition.defaultBaseUrl) }
     var apiKey by remember(selectedProviderId) { mutableStateOf("") }
     var revealApiKey by remember { mutableStateOf(false) }
+    var importMessage by remember(selectedProviderId) { mutableStateOf<String?>(null) }
+    var importIsError by remember(selectedProviderId) { mutableStateOf(false) }
+
+    val isGeminiOrVertex = selectedProviderId == "gemini" || selectedProviderId == "vertex"
+
+    val serviceAccountImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                val rawJson = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.bufferedReader(Charsets.UTF_8).readText()
+                } ?: throw IllegalStateException("无法读取选定文件")
+                val cleanJson = rawJson.trim().removePrefix("\uFEFF").trim()
+                val parsed = VertexAiServiceAccountAuth.parseServiceAccountJson(cleanJson)
+                apiKey = cleanJson
+                val trimmedBaseUrl = baseUrl.trim()
+                val shouldUpdateBaseUrl = trimmedBaseUrl.isBlank() ||
+                    trimmedBaseUrl == "https://generativelanguage.googleapis.com" ||
+                    trimmedBaseUrl == "https://generativelanguage.googleapis.com/v1beta/openai" ||
+                    trimmedBaseUrl == "https://aiplatform.googleapis.com" ||
+                    trimmedBaseUrl.contains("aiplatform.googleapis.com")
+                if (shouldUpdateBaseUrl) {
+                    val currentLocation = if (trimmedBaseUrl.contains("aiplatform.googleapis.com")) {
+                        VertexAiServiceAccountAuth.resolveLocation(trimmedBaseUrl, parsed.defaultLocation)
+                    } else {
+                        parsed.defaultLocation
+                    }
+                    baseUrl = VertexAiServiceAccountAuth.buildDefaultVertexBaseUrl(parsed.projectId, currentLocation)
+                }
+                importMessage = null
+                importIsError = false
+            }.onFailure { e ->
+                importMessage = e.message ?: "导入服务账号 JSON 失败"
+                importIsError = true
+            }
+        }
+    }
+
+    val parsedServiceAccount = remember(apiKey) {
+        if (VertexAiServiceAccountAuth.looksLikeServiceAccountJson(apiKey)) {
+            runCatching { VertexAiServiceAccountAuth.parseServiceAccountJson(apiKey) }.getOrNull()
+        } else {
+            null
+        }
+    }
+
+    val apiKeyLabel = when (selectedProviderId) {
+        "vertex" -> if (configured) "新服务账号 JSON 或 API Key（留空表示不修改）" else "服务账号 JSON 或 API Key"
+        "gemini" -> if (configured) "新 API Key 或服务账号 JSON（留空表示不修改）" else "API Key 或服务账号 JSON"
+        else -> if (configured) "新 API Key（留空表示不修改）" else "API Key"
+    }
+
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(18.dp)) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionHeader("模型供应商", description = "选择供应商后配置 API；保存前会调用模型列表接口真实验证。")
@@ -189,6 +248,8 @@ private fun ProviderSection(viewModel: AppViewModel, providers: List<ProviderCon
                     selectedProviderId = it.id
                     revealApiKey = false
                     apiKey = ""
+                    importMessage = null
+                    importIsError = false
                 },
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -212,14 +273,41 @@ private fun ProviderSection(viewModel: AppViewModel, providers: List<ProviderCon
                     color = MaterialTheme.colorScheme.tertiary,
                 )
             }
+            if (isGeminiOrVertex) {
+                SecondaryAction(
+                    "导入服务账号 JSON",
+                    onClick = { serviceAccountImportLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Outlined.UploadFile,
+                )
+            }
+            if (parsedServiceAccount != null) {
+                Text(
+                    "已加载服务账号：${parsedServiceAccount.clientEmail}（项目：${parsedServiceAccount.projectId}）",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            importMessage?.let { msg ->
+                Text(
+                    msg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (importIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
+            }
             OutlinedTextField(value = baseUrl, onValueChange = { baseUrl = it }, label = { Text("Base URL") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(
                 value = apiKey,
-                onValueChange = { apiKey = it },
-                label = { Text(if (configured) "新 API Key（留空表示不修改）" else "API Key") },
+                onValueChange = {
+                    apiKey = it
+                    importMessage = null
+                    importIsError = false
+                },
+                label = { Text(apiKeyLabel) },
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = if (revealApiKey) VisualTransformation.None else PasswordVisualTransformation(),
-                singleLine = true,
+                singleLine = !isGeminiOrVertex,
+                maxLines = if (isGeminiOrVertex) 4 else 1,
                 leadingIcon = { Icon(Icons.Outlined.Key, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = {
@@ -240,7 +328,7 @@ private fun ProviderSection(viewModel: AppViewModel, providers: List<ProviderCon
                     primary = { modifier ->
                         PrimaryAction(
                             text = if (busy) "验证中…" else "验证并安全保存",
-                            onClick = { viewModel.saveProvider(selectedProviderId, apiKey, baseUrl, null) { apiKey = ""; revealApiKey = false } },
+                            onClick = { viewModel.saveProvider(selectedProviderId, apiKey, baseUrl, null) { apiKey = ""; revealApiKey = false; importMessage = null; importIsError = false } },
                             modifier = modifier,
                             enabled = !busy,
                             icon = Icons.Outlined.Security,
@@ -259,7 +347,7 @@ private fun ProviderSection(viewModel: AppViewModel, providers: List<ProviderCon
             } else {
                 PrimaryAction(
                     text = if (busy) "验证中…" else "验证并安全保存",
-                    onClick = { viewModel.saveProvider(selectedProviderId, apiKey, baseUrl, null) { apiKey = ""; revealApiKey = false } },
+                    onClick = { viewModel.saveProvider(selectedProviderId, apiKey, baseUrl, null) { apiKey = ""; revealApiKey = false; importMessage = null; importIsError = false } },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = apiKey.isNotBlank() && !busy,
                     icon = Icons.Outlined.Security,
@@ -551,7 +639,12 @@ private fun InstructionSection(viewModel: AppViewModel) {
 }
 
 @Composable
-private fun BackupSection(viewModel: AppViewModel, rollbackAvailable: Boolean, busy: Boolean) {
+private fun BackupSection(
+    viewModel: AppViewModel,
+    novelName: String?,
+    rollbackAvailable: Boolean,
+    busy: Boolean,
+) {
     var createPassword by remember { mutableStateOf<String?>(null) }
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
     var restorePassword by remember { mutableStateOf<String?>(null) }
@@ -565,6 +658,11 @@ private fun BackupSection(viewModel: AppViewModel, rollbackAvailable: Boolean, b
         if (uri != null && password != null) viewModel.createBackup(uri, password.toCharArray())
         pendingCreatePassword = null
     }
+    val epubLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/epub+zip"),
+    ) { uri ->
+        if (uri != null) viewModel.exportNovelEpub(uri)
+    }
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) { restoreUri = uri; restorePassword = ""; preview = null }
     }
@@ -575,6 +673,21 @@ private fun BackupSection(viewModel: AppViewModel, rollbackAvailable: Boolean, b
                 primary = { modifier -> PrimaryAction("创建备份", onClick = { createPassword = "" }, modifier = modifier, enabled = !busy, icon = Icons.Outlined.Backup) },
                 secondary = { modifier -> SecondaryAction("选择备份恢复", onClick = { restoreLauncher.launch(arrayOf("application/octet-stream", "application/json", "*/*")) }, modifier = modifier, enabled = !busy, icon = Icons.Outlined.Restore) },
             )
+            if (novelName != null) {
+                HorizontalDivider()
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text("导出本作 EPUB", style = MaterialTheme.typography.titleMedium)
+                        Text("将当前作品的正文导出为标准 EPUB 电子书，方便在各类阅读器中阅读。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    SecondaryAction(
+                        "导出本作 EPUB",
+                        onClick = { epubLauncher.launch(EpubExporter.buildSuggestedFileName(novelName)) },
+                        enabled = !busy,
+                        icon = Icons.Outlined.Book,
+                    )
+                }
+            }
             if (rollbackAvailable) {
                 HorizontalDivider()
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

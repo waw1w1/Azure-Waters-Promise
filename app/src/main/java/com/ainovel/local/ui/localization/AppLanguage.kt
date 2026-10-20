@@ -167,6 +167,14 @@ private val exactEnglish = mapOf(
     "移入章节回收区" to "Move chapter to trash",
     "移入回收区" to "Move to trash",
     "将章节移入回收区？" to "Move this chapter to trash?",
+    "编辑章节标题" to "Edit chapter title",
+    "彻底删除章节" to "Permanently delete chapter",
+    "彻底删除章节？" to "Permanently delete this chapter?",
+    "彻底删除" to "Delete permanently",
+    "彻底删除后，该章节的正文与版本将永久移除，无法恢复。" to "Once permanently deleted, this chapter's text and versions will be removed forever and cannot be recovered.",
+    "章节已彻底删除" to "Chapter permanently deleted",
+    "彻底删除章节失败" to "Could not permanently delete the chapter",
+    "只能彻底删除回收区中的章节" to "Only chapters in Trash can be permanently deleted",
     "章节会暂时收进回收区，正文、版本与创作记录都不会丢失。它将不再参与后续生成，依赖它的总结也会失效；恢复章节后，需要重新整理这些总结。" to "The chapter will be kept in Trash. Its text, versions, and writing history will remain intact, but it will no longer be used for generation and dependent summaries will become outdated. Restore it and refresh those summaries when needed.",
     "展开章节列表" to "Expand chapter list",
     "折叠章节列表" to "Collapse chapter list",
@@ -371,6 +379,13 @@ private val exactEnglish = mapOf(
     "简洁" to "Concise",
     "标准" to "Standard",
     "详细" to "Detailed",
+    "总结标题" to "Summary title",
+    "总结标题不能为空" to "Summary title cannot be empty",
+    "总结内容不能为空" to "Summary content cannot be empty",
+    "总结不存在" to "Summary not found",
+    "删除总结失败" to "Could not delete the summary",
+    "总结已删除" to "Summary deleted",
+    "删除后，这份总结会从故事记忆中移除；依赖它的后续总结会失效，过去的创作记录仍会保留。" to "This summary will be removed from story memory. Dependent summaries will become outdated, while past writing records will remain.",
     "总结正文" to "Summary text",
     "修改这份总结后，依赖它的后续总结会提醒你重新整理。" to "Editing this summary will mark dependent summaries for refresh.",
     "暂无正文" to "No chapter text",
@@ -478,9 +493,111 @@ private val exactEnglish = mapOf(
     "恢复推荐选择" to "Restore recommended selection",
     "显示 API Key" to "Show API key",
     "隐藏 API Key" to "Hide API key",
+    "Google Cloud Vertex AI" to "Google Cloud Vertex AI",
+    "Gemini / Vertex AI 原生" to "Native Gemini / Vertex AI",
+    "Vertex AI 原生" to "Native Vertex AI",
+    "支持 Gemini API Key，或直接粘贴 / 导入 Google Cloud Vertex AI 服务账号 JSON 凭证。" to "Supports Gemini API keys or directly pasting / importing Google Cloud Vertex AI service account JSON credentials.",
+    "导入或粘贴 Google Cloud 服务账号 (Service Account) JSON 密钥，自动签发 OAuth2 令牌并填充项目地址。" to "Import or paste a Google Cloud Service Account JSON key to automatically issue OAuth2 tokens and populate the project URL.",
+    "导入服务账号 JSON" to "Import Service Account JSON",
+    "API Key 或服务账号 JSON" to "API Key or Service Account JSON",
+    "新 API Key 或服务账号 JSON（留空表示不修改）" to "New API key or Service Account JSON (leave blank to keep the current key)",
+    "服务账号 JSON 或 API Key" to "Service Account JSON or API Key",
+    "新服务账号 JSON 或 API Key（留空表示不修改）" to "New Service Account JSON or API key (leave blank to keep the current key)",
+    "已成功导入服务账号 JSON" to "Service account JSON imported successfully",
+    "导入服务账号 JSON 失败" to "Failed to import service account JSON",
+    "服务账号内容必须为 JSON 对象" to "Service account content must be a JSON object",
+    "检测到 OAuth 客户端 JSON 而非服务账号（Service Account）密钥 JSON，请导入包含 private_key 与 client_email 的服务账号 JSON" to "Detected OAuth client JSON instead of Service Account key JSON. Please import a service account JSON containing private_key and client_email",
+    "服务账号 JSON 缺少 project_id" to "Service account JSON missing project_id",
+    "服务账号 JSON 缺少 client_email" to "Service account JSON missing client_email",
+    "服务账号 JSON 缺少有效的 private_key（需包含 PEM 格式私钥）" to "Service account JSON missing valid private_key (must contain PEM format private key)",
+    "OAuth2 响应缺少 access_token" to "OAuth2 response missing access_token",
+    "Google OAuth2 返回缺失 access_token" to "Google OAuth2 response missing access_token",
+    "灵感内容已复制到剪贴板" to "Idea copied to clipboard",
+    "保存灵感失败" to "Could not save idea",
+    "请输入给自己看的名字" to "Please enter a private name",
+    "请输入灵感内容" to "Please enter idea content",
+    "请先选择作品" to "Please select a story first",
+    "已收入灵感素材库，可在“记忆 · 灵感素材”中查看" to "Saved to idea library. View in “Memory · Ideas”",
+    "已加入本作世界书，将陪伴下一次创作" to "Added to story world book; will accompany the next generation",
+    "已加入本作预设，将陪伴下一次创作" to "Added to story presets; will accompany the next generation",
+    "已存入本作，暂未启用" to "Saved to story, currently disabled",
+    "填入本章要求失败" to "Could not apply chapter requirement",
+    "请输入本次创作要求" to "Please enter a writing request",
+    "请输入世界书条目名称" to "Please enter a world book entry name",
+    "已填入本章创作要求，并同步加入本作世界书" to "Applied as chapter writing request and added to story world book",
+    "已填入本章创作要求" to "Applied as chapter writing request",
+    "复制" to "Copy",
+    "收入灵感库" to "Save to idea library",
+    "用作本章要求" to "Use as chapter request",
+    "收入灵感资料库" to "Save to Idea Library",
+    "经你确认后才会保存。你可以先删减或修改内容，再选择存放到全局灵感素材库或直接加入本作世界书。" to "Saved only after your confirmation. You can edit or trim content before saving to the global idea library or adding directly to this story's world book.",
+    "灵感素材库（全局）" to "Idea library (Global)",
+    "本作世界书（直接用于下一章）" to "Story world book (For next chapter)",
+    "灵感内容（可编辑裁剪）" to "Idea content (editable)",
+    "确认收入" to "Confirm and save",
+    "用作本章创作要求" to "Use as Chapter Request",
+    "确认后会将以下内容填入写作页的“本次创作要求”，并可同时加入本作世界书陪伴下一章创作。" to "After confirmation, this will be filled into Writing Request on the write tab, and can optionally join the story world book for the next chapter.",
+    "本次创作要求（可编辑裁剪）" to "Writing request (editable)",
+    "同时加入本作世界书" to "Also add to story world book",
+    "世界书条目名称" to "World book entry name",
+    "确认并前往写作" to "Confirm and start writing",
+    "导出 EPUB" to "Export EPUB",
+    "导出本作 EPUB" to "Export story as EPUB",
+    "EPUB 电子书已导出" to "EPUB ebook exported",
+    "导出 EPUB 失败" to "Could not export EPUB",
+    "还没有可导出的正文内容" to "No chapter text available to export yet",
+    "将当前作品的正文导出为标准 EPUB 电子书，方便在各类阅读器中阅读。" to "Export the current story as a standard EPUB ebook to read on e-readers.",
 )
 
 private fun translateDynamicText(source: String): String {
+    Regex("""^灵感记录 #(\d+)$""").matchEntire(source)?.let {
+        return "Idea record #${it.groupValues[1]}"
+    }
+    Regex("""^下一章灵感 #(\d+)$""").matchEntire(source)?.let {
+        return "Next chapter idea #${it.groupValues[1]}"
+    }
+    Regex("""^保存灵感失败：(.*)$""").matchEntire(source)?.let {
+        return "Could not save idea: ${localized(it.groupValues[1], AppLanguage.ENGLISH)}"
+    }
+    Regex("""^填入本章要求失败：(.*)$""").matchEntire(source)?.let {
+        return "Could not apply chapter requirement: ${localized(it.groupValues[1], AppLanguage.ENGLISH)}"
+    }
+    Regex("""^导出 EPUB 失败：(.*)$""").matchEntire(source)?.let {
+        return "Could not export EPUB: ${localized(it.groupValues[1], AppLanguage.ENGLISH)}"
+    }
+    Regex("""^删除总结失败：(.*)$""").matchEntire(source)?.let {
+        return "Could not delete the summary: ${localized(it.groupValues[1], AppLanguage.ENGLISH)}"
+    }
+    Regex("""^保存总结失败：(.*)$""").matchEntire(source)?.let {
+        return "Could not save the summary: ${localized(it.groupValues[1], AppLanguage.ENGLISH)}"
+    }
+    Regex("""^彻底删除章节失败：(.*)$""").matchEntire(source)?.let {
+        return "Could not permanently delete the chapter: ${localized(it.groupValues[1], AppLanguage.ENGLISH)}"
+    }
+    Regex("""^已加载服务账号：(.+)（项目：(.+)）$""").matchEntire(source)?.let {
+        return "Loaded service account: ${it.groupValues[1]} (project: ${it.groupValues[2]})"
+    }
+    Regex("""^服务账号 JSON 格式错误：(.*)$""").matchEntire(source)?.let {
+        return "Invalid service account JSON format: ${it.groupValues[1]}"
+    }
+    Regex("""^服务账号凭证解析失败：(.*)$""").matchEntire(source)?.let {
+        return "Failed to parse service account credentials: ${it.groupValues[1]}"
+    }
+    Regex("""^服务账号私钥解析或签名失败：(.*)$""").matchEntire(source)?.let {
+        return "Failed to parse or sign service account private key: ${it.groupValues[1]}"
+    }
+    Regex("""^获取 Google OAuth2 访问令牌失败：(.*)$""").matchEntire(source)?.let {
+        return "Failed to acquire Google OAuth2 access token: ${it.groupValues[1]}"
+    }
+    Regex("""^无法连接 Google OAuth2 服务(?:器)?：(.*)$""").matchEntire(source)?.let {
+        return "Unable to connect to Google OAuth2 server: ${it.groupValues[1]}"
+    }
+    Regex("""^Google OAuth2 返回的不是合法的 JSON：(.*)$""").matchEntire(source)?.let {
+        return "Google OAuth2 returned invalid JSON: ${it.groupValues[1]}"
+    }
+    Regex("""^Google 服务账号认证失败（HTTP (\d+)）：(.*)$""").matchEntire(source)?.let {
+        return "Google service account authentication failed (HTTP ${it.groupValues[1]}): ${it.groupValues[2]}"
+    }
     Regex("""^(\d+) 本作品$""").matchEntire(source)?.let { return "${it.groupValues[1]} stories" }
     Regex("""^(\d+) 个候选待选择$""").matchEntire(source)?.let { return "${it.groupValues[1]} candidates awaiting selection" }
     Regex("""^候选 (\d+) · 还没有写入正文$""").matchEntire(source)?.let { return "Candidate ${it.groupValues[1]} · Not added to the chapter yet" }
@@ -543,6 +660,8 @@ private fun translateDynamicText(source: String): String {
         "中途停下" to "Stopped early",
         "未命名章节" to "Untitled chapter",
         "的更多操作" to " options",
+        "编辑 " to "Edit ",
+        "删除 " to "Delete ",
         "编辑" to "Edit ",
         "新建" to "New ",
         "删除“" to "Delete “",
@@ -577,6 +696,15 @@ private fun translateDynamicText(source: String): String {
         "删除条目失败" to "Could not delete the entry",
         "复制条目失败" to "Could not copy the entry",
         "调整顺序失败" to "Could not change the order",
+        "保存灵感失败" to "Could not save idea",
+        "填入本章要求失败" to "Could not apply chapter requirement",
+        "导出 EPUB 失败" to "Could not export EPUB",
+        "还没有可导出的正文内容" to "No chapter text available to export yet",
+        "导出 EPUB" to "Export EPUB",
+        "导出本作 EPUB" to "Export story as EPUB",
+        "EPUB 电子书已导出" to "EPUB ebook exported",
+        "灵感记录 #" to "Idea record #",
+        "下一章灵感 #" to "Next chapter idea #",
         "连接验证失败" to "Connection verification failed",
         "刷新模型失败" to "Could not refresh models",
         "验证手动模型失败" to "Manual model verification failed",

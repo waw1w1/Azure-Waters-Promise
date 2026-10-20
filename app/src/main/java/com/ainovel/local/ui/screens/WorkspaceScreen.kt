@@ -1,5 +1,7 @@
 package com.ainovel.local.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -36,6 +38,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.CheckCircleOutline
@@ -91,6 +94,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ainovel.local.data.model.CandidateEntity
@@ -98,6 +102,7 @@ import com.ainovel.local.data.model.CandidateGroupEntity
 import com.ainovel.local.data.model.ChapterEntity
 import com.ainovel.local.data.model.TaskType
 import com.ainovel.local.data.model.UsageRecordEntity
+import com.ainovel.local.domain.EpubExporter
 import com.ainovel.local.ui.AppViewModel
 import com.ainovel.local.ui.WorkspaceUiState
 import com.ainovel.local.ui.components.PrimaryAction
@@ -105,6 +110,8 @@ import com.ainovel.local.ui.components.SecondaryAction
 import com.ainovel.local.ui.components.StatusPill
 import com.ainovel.local.ui.components.StatusTone
 import kotlinx.coroutines.launch
+
+internal const val CHAPTER_RAIL_EXPANDED_WIDTH_DP = 332
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -128,6 +135,16 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
     var chapterRailExpanded by rememberSaveable { mutableStateOf(false) }
     var manuscriptFocused by remember { mutableStateOf(false) }
     val hideDockForManuscriptKeyboard = manuscriptFocused && imeVisible
+    val activeGroup = state.activeGroups.firstOrNull()
+
+    val exportEpubLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/epub+zip"),
+    ) { uri ->
+        if (uri != null) viewModel.exportNovelEpub(uri)
+    }
+    val onExportEpub = {
+        exportEpubLauncher.launch(EpubExporter.buildSuggestedFileName(state.novel?.name ?: "novel"))
+    }
 
     if (expanded) {
         Row(Modifier.fillMaxSize()) {
@@ -145,7 +162,9 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
                         onMove = viewModel::moveChapter,
                         onDelete = viewModel::softDeleteChapter,
                         onRestore = viewModel::restoreChapter,
-                        modifier = Modifier.width(232.dp).fillMaxHeight(),
+                        onPermanentDelete = viewModel::permanentlyDeleteChapter,
+                        onExportEpub = onExportEpub,
+                        modifier = Modifier.width(CHAPTER_RAIL_EXPANDED_WIDTH_DP.dp).fillMaxHeight(),
                     )
                     VerticalDivider()
                 }
@@ -153,14 +172,15 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
             Column(Modifier.weight(1.5f).fillMaxHeight()) {
                 ManuscriptPane(
                     state = state,
-                        onContentChange = viewModel::updateChapterDraft,
+                    onContentChange = viewModel::updateChapterDraft,
                     onRename = viewModel::renameChapter,
                     onEditorFocusChange = { manuscriptFocused = it },
-                        onOpenChapters = { focusManager.clearFocus(); keyboardController?.hide(); chapterRailExpanded = !chapterRailExpanded },
+                    onOpenChapters = { focusManager.clearFocus(); keyboardController?.hide(); chapterRailExpanded = !chapterRailExpanded },
                     chaptersExpanded = chapterRailExpanded,
+                    onExportEpub = onExportEpub,
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                 )
-                if ((state.candidates.isEmpty() || !candidatePanelExpanded) && !hideDockForManuscriptKeyboard) {
+                if ((state.candidates.isEmpty() || !candidatePanelExpanded || activeGroup == null) && !hideDockForManuscriptKeyboard) {
                     GenerationDock(
                         requirement = requirement,
                         onRequirementChange = { viewModel.creativeRequirement.value = it },
@@ -174,14 +194,14 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
                         onCreateNextChapter = viewModel::createNextChapterAndInspect,
                         pendingCandidateCount = state.candidates.size,
                         onShowCandidates = viewModel::showCandidatePanel,
-                        onDeleteAllCandidates = { state.activeGroups.firstOrNull()?.let { viewModel.deleteAllCandidates(it.id) } },
+                        onDeleteAllCandidates = { activeGroup?.let { viewModel.deleteAllCandidates(it.id) } },
                     )
                 }
             }
-            if (state.candidates.isNotEmpty() && candidatePanelExpanded) {
+            if (activeGroup != null && state.candidates.isNotEmpty() && candidatePanelExpanded) {
                 VerticalDivider()
                 CandidatePanel(
-                    group = state.activeGroups.first(),
+                    group = activeGroup,
                     candidates = state.candidates,
                     onEdit = viewModel::editCandidate,
                     onRoll = viewModel::roll,
@@ -189,15 +209,15 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
                     onAccept = viewModel::acceptCandidate,
                     onStop = viewModel::stopGeneration,
                     onBackToPrompt = viewModel::hideCandidatePanel,
-                    streamReasoning = if (state.activeGroups.first().taskType == TaskType.SUMMARY) summarySettings.streamThinking else bodySettings.streamThinking,
+                    streamReasoning = if (activeGroup.taskType == TaskType.SUMMARY) summarySettings.streamThinking else bodySettings.streamThinking,
                     busy = busy,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
             }
         }
-    } else if (shortViewport && state.candidates.isNotEmpty() && candidatePanelExpanded) {
+    } else if (shortViewport && activeGroup != null && state.candidates.isNotEmpty() && candidatePanelExpanded) {
         CandidatePanel(
-            group = state.activeGroups.first(),
+            group = activeGroup,
             candidates = state.candidates,
             onEdit = viewModel::editCandidate,
             onRoll = viewModel::roll,
@@ -205,7 +225,7 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
             onAccept = viewModel::acceptCandidate,
             onStop = viewModel::stopGeneration,
             onBackToPrompt = viewModel::hideCandidatePanel,
-            streamReasoning = if (state.activeGroups.first().taskType == TaskType.SUMMARY) summarySettings.streamThinking else bodySettings.streamThinking,
+            streamReasoning = if (activeGroup.taskType == TaskType.SUMMARY) summarySettings.streamThinking else bodySettings.streamThinking,
             busy = busy,
             modifier = Modifier.fillMaxSize(),
         )
@@ -219,11 +239,12 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
                     onEditorFocusChange = { manuscriptFocused = it },
                     onOpenChapters = { focusManager.clearFocus(); keyboardController?.hide(); showChapters = true },
                     chaptersExpanded = showChapters,
+                    onExportEpub = onExportEpub,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
             AnimatedVisibility(
-                visible = (state.candidates.isEmpty() || !candidatePanelExpanded) && !hideDockForManuscriptKeyboard,
+                visible = (state.candidates.isEmpty() || !candidatePanelExpanded || activeGroup == null) && !hideDockForManuscriptKeyboard,
                 enter = fadeIn(tween(160)) + slideInVertically { it / 3 },
                 exit = fadeOut(tween(120)),
             ) {
@@ -240,29 +261,29 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
                     onCreateNextChapter = viewModel::createNextChapterAndInspect,
                     pendingCandidateCount = state.candidates.size,
                     onShowCandidates = viewModel::showCandidatePanel,
-                    onDeleteAllCandidates = { state.activeGroups.firstOrNull()?.let { viewModel.deleteAllCandidates(it.id) } },
+                    onDeleteAllCandidates = { activeGroup?.let { viewModel.deleteAllCandidates(it.id) } },
                     compact = true,
                 )
             }
             AnimatedVisibility(
-                visible = state.candidates.isNotEmpty() && candidatePanelExpanded,
+                visible = activeGroup != null && state.candidates.isNotEmpty() && candidatePanelExpanded,
                 enter = fadeIn(tween(180)) + slideInVertically { it / 3 },
                 exit = fadeOut(tween(120)) + slideOutVertically(tween(150)) { it / 4 },
             ) {
-                if (state.candidates.isNotEmpty()) {
-                CandidatePanel(
-                    group = state.activeGroups.first(),
-                    candidates = state.candidates,
-                    onEdit = viewModel::editCandidate,
-                    onRoll = viewModel::roll,
-                    onDeleteCandidate = viewModel::deleteCandidate,
-                    onAccept = viewModel::acceptCandidate,
-                    onStop = viewModel::stopGeneration,
-                    onBackToPrompt = viewModel::hideCandidatePanel,
-                    streamReasoning = if (state.activeGroups.first().taskType == TaskType.SUMMARY) summarySettings.streamThinking else bodySettings.streamThinking,
-                    busy = busy,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 430.dp),
-                )
+                if (activeGroup != null && state.candidates.isNotEmpty()) {
+                    CandidatePanel(
+                        group = activeGroup,
+                        candidates = state.candidates,
+                        onEdit = viewModel::editCandidate,
+                        onRoll = viewModel::roll,
+                        onDeleteCandidate = viewModel::deleteCandidate,
+                        onAccept = viewModel::acceptCandidate,
+                        onStop = viewModel::stopGeneration,
+                        onBackToPrompt = viewModel::hideCandidatePanel,
+                        streamReasoning = if (activeGroup.taskType == TaskType.SUMMARY) summarySettings.streamThinking else bodySettings.streamThinking,
+                        busy = busy,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 430.dp),
+                    )
                 }
             }
         }
@@ -284,6 +305,11 @@ fun WorkspaceScreen(viewModel: AppViewModel, imeVisible: Boolean) {
                 onMove = viewModel::moveChapter,
                 onDelete = viewModel::softDeleteChapter,
                 onRestore = viewModel::restoreChapter,
+                onPermanentDelete = viewModel::permanentlyDeleteChapter,
+                onExportEpub = {
+                    onExportEpub()
+                    showChapters = false
+                },
                 modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp),
             )
         }
@@ -299,15 +325,19 @@ private fun ChapterRail(
     onMove: (String, Int) -> Unit,
     onDelete: (String) -> Unit,
     onRestore: (String) -> Unit,
+    onPermanentDelete: (String) -> Unit,
+    onExportEpub: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var deleteTarget by remember { mutableStateOf<ChapterEntity?>(null) }
+    var permanentDeleteTarget by remember { mutableStateOf<ChapterEntity?>(null) }
     Column(modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("章节", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("故事顺序", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            IconButton(onClick = onExportEpub) { Icon(Icons.Outlined.Book, contentDescription = "导出 EPUB") }
             IconButton(onClick = onAdd) { Icon(Icons.Outlined.Add, contentDescription = "创建下一章") }
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -320,7 +350,7 @@ private fun ChapterRail(
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
@@ -328,29 +358,44 @@ private fun ChapterRail(
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             chapter.name?.takeIf { it.isNotBlank() } ?: "未命名章节",
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
                         if (chapter.includeInContext) {
+                            Spacer(Modifier.width(4.dp))
                             Icon(
                                 Icons.Outlined.CheckCircleOutline,
                                 contentDescription = "已纳入上下文",
-                                modifier = Modifier.size(17.dp),
+                                modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.secondary,
                             )
                         }
-                        IconButton(onClick = { onMove(chapter.id, -1) }, enabled = index > 0) {
-                            Icon(Icons.Outlined.ArrowUpward, contentDescription = "上移章节")
+                        Spacer(Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { onMove(chapter.id, -1) },
+                            enabled = index > 0,
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(Icons.Outlined.ArrowUpward, contentDescription = "上移章节", modifier = Modifier.size(18.dp))
                         }
-                        IconButton(onClick = { onMove(chapter.id, 1) }, enabled = index < state.chapters.lastIndex) {
-                            Icon(Icons.Outlined.ArrowDownward, contentDescription = "下移章节")
+                        IconButton(
+                            onClick = { onMove(chapter.id, 1) },
+                            enabled = index < state.chapters.lastIndex,
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(Icons.Outlined.ArrowDownward, contentDescription = "下移章节", modifier = Modifier.size(18.dp))
                         }
-                        IconButton(onClick = { deleteTarget = chapter }, enabled = state.chapters.size > 1) {
-                            Icon(Icons.Outlined.DeleteOutline, contentDescription = "移入章节回收区")
+                        IconButton(
+                            onClick = { deleteTarget = chapter },
+                            enabled = state.chapters.size > 1,
+                            modifier = Modifier.size(40.dp),
+                        ) {
+                            Icon(Icons.Outlined.DeleteOutline, contentDescription = "移入章节回收区", modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -362,9 +407,22 @@ private fun ChapterRail(
                 itemsIndexed(deletedChapters, key = { _, chapter -> chapter.id }) { _, chapter ->
                     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(12.dp)) {
                         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(chapter.name?.ifBlank { null } ?: "未命名章节", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                chapter.name?.ifBlank { null } ?: "未命名章节",
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                             IconButton(onClick = { onRestore(chapter.id) }) {
                                 Icon(Icons.Outlined.RestoreFromTrash, contentDescription = "恢复章节")
+                            }
+                            IconButton(onClick = { permanentDeleteTarget = chapter }) {
+                                Icon(
+                                    Icons.Outlined.DeleteOutline,
+                                    contentDescription = "彻底删除章节",
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
                             }
                         }
                     }
@@ -381,6 +439,22 @@ private fun ChapterRail(
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("取消") } },
         )
     }
+    permanentDeleteTarget?.let { chapter ->
+        AlertDialog(
+            onDismissRequest = { permanentDeleteTarget = null },
+            title = { Text("彻底删除章节？") },
+            text = { Text("彻底删除后，该章节的正文与版本将永久移除，无法恢复。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onPermanentDelete(chapter.id)
+                        permanentDeleteTarget = null
+                    },
+                ) { Text("彻底删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { permanentDeleteTarget = null }) { Text("取消") } },
+        )
+    }
 }
 
 @Composable
@@ -391,6 +465,7 @@ private fun ManuscriptPane(
     onEditorFocusChange: (Boolean) -> Unit,
     onOpenChapters: (() -> Unit)?,
     chaptersExpanded: Boolean,
+    onExportEpub: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val chapter = state.selectedChapter
@@ -429,6 +504,9 @@ private fun ManuscriptPane(
             }
             state.latestUsage?.let { usage ->
                 ContextUsageRing(usage)
+            }
+            IconButton(onClick = onExportEpub) {
+                Icon(Icons.Outlined.Book, contentDescription = "导出 EPUB")
             }
             IconButton(onClick = { chapterDetailsExpanded = !chapterDetailsExpanded }) {
                 Icon(
@@ -767,6 +845,8 @@ private fun CandidatePanel(
     val pagerState = rememberPagerState(pageCount = { candidates.size })
     val scope = rememberCoroutineScope()
     var candidatePendingDelete by remember(group.id) { mutableStateOf<CandidateEntity?>(null) }
+    val currentPage = pagerState.currentPage.coerceIn(0, (candidates.size - 1).coerceAtLeast(0))
+    val displayPage = if (candidates.isEmpty()) 0 else currentPage + 1
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -787,25 +867,25 @@ private fun CandidatePanel(
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        "候选 ${"%02d".format(pagerState.currentPage + 1)} · 还没有写入正文",
+                        "候选 ${"%02d".format(displayPage)} · 还没有写入正文",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
                 IconButton(
-                    onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
-                    enabled = pagerState.currentPage > 0,
+                    onClick = { scope.launch { pagerState.animateScrollToPage((currentPage - 1).coerceAtLeast(0)) } },
+                    enabled = currentPage > 0,
                 ) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "上一个候选")
                 }
                 Text(
-                    "${pagerState.currentPage + 1}/${candidates.size}",
+                    "$displayPage/${candidates.size}",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 IconButton(
-                    onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                    enabled = pagerState.currentPage < candidates.lastIndex,
+                    onClick = { scope.launch { pagerState.animateScrollToPage((currentPage + 1).coerceAtMost(candidates.lastIndex.coerceAtLeast(0))) } },
+                    enabled = currentPage < candidates.lastIndex,
                 ) {
                     Icon(Icons.AutoMirrored.Outlined.ArrowForward, contentDescription = "下一个候选")
                 }
@@ -817,14 +897,14 @@ private fun CandidatePanel(
                     }
                 }
                 IconButton(
-                    onClick = { candidates.getOrNull(pagerState.currentPage)?.let { candidatePendingDelete = it } },
+                    onClick = { candidates.getOrNull(currentPage)?.let { candidatePendingDelete = it } },
                 ) {
                     Icon(Icons.Outlined.DeleteOutline, contentDescription = "删除当前候选")
                 }
             }
             HorizontalDivider()
             HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
-                val candidate = candidates[page]
+                val candidate = candidates.getOrNull(page) ?: return@HorizontalPager
                 var text by remember(candidate.id, candidate.editedText) { mutableStateOf(candidate.editedText) }
                 var reasoningExpanded by rememberSaveable(candidate.id) { mutableStateOf(false) }
                 Column(

@@ -65,6 +65,43 @@ data class CandidateDeletionResult(
     val groupDiscarded: Boolean,
 )
 
+data class PreparedSummaryUpdate(
+    val updatedSummary: SummaryEntity,
+    val nameChanged: Boolean,
+    val contentChanged: Boolean,
+)
+
+fun prepareSummaryUpdate(
+    existing: SummaryEntity,
+    newName: String,
+    newContent: String,
+    now: Long = System.currentTimeMillis(),
+): PreparedSummaryUpdate {
+    val trimmedName = newName.trim()
+    val trimmedContent = newContent.trim()
+    require(trimmedName.isNotEmpty()) { "总结标题不能为空" }
+    require(trimmedContent.isNotEmpty()) { "总结内容不能为空" }
+    val nameChanged = existing.name != trimmedName
+    val contentChanged = existing.content != trimmedContent
+    val updated = existing.copy(
+        name = trimmedName,
+        content = trimmedContent,
+        contentVersion = if (contentChanged) existing.contentVersion + 1 else existing.contentVersion,
+        updatedAt = if (nameChanged || contentChanged) now else existing.updatedAt,
+    )
+    return PreparedSummaryUpdate(
+        updatedSummary = updated,
+        nameChanged = nameChanged,
+        contentChanged = contentChanged,
+    )
+}
+
+fun preparePermanentChapterDeletion(chapter: ChapterEntity?): ChapterEntity {
+    val existing = chapter ?: error("章节不存在")
+    require(existing.deleted) { "只能彻底删除回收区中的章节" }
+    return existing
+}
+
 class NovelRepository(
     private val database: NovelDatabase,
     private val novelDao: NovelDao,
@@ -94,6 +131,7 @@ class NovelRepository(
 
     suspend fun novel(id: String) = novelDao.novel(id)
     suspend fun chapter(id: String) = novelDao.chapter(id)
+    suspend fun allChapters(novelId: String): List<ChapterEntity> = novelDao.allChapters(novelId)
     suspend fun candidateGroup(id: String) = generationDao.candidateGroup(id)
     suspend fun candidate(id: String) = generationDao.candidate(id)
     suspend fun requestSnapshot(id: String) = generationDao.requestSnapshot(id)
@@ -285,6 +323,15 @@ class NovelRepository(
         markBaseContextUsageStale(chapter.novelId)
     }
 
+    suspend fun permanentlyDeleteChapter(chapterId: String) = database.withTransaction {
+        val chapter = preparePermanentChapterDeletion(novelDao.chapter(chapterId))
+        markDependentSummaries(chapter.id, SummaryStatus.INVALID)
+        generationDao.deleteAcceptancesForChapter(chapter.id)
+        check(novelDao.permanentlyDeleteChapter(chapter.id) == 1)
+        markBaseContextUsageStale(chapter.novelId)
+        novelDao.touchNovel(chapter.novelId)
+    }
+
     suspend fun reorderChapter(chapterId: String, newStoryOrder: Long) = database.withTransaction {
         require(newStoryOrder > 0) { "章节顺序必须大于零" }
         val chapter = novelDao.chapter(chapterId) ?: error("章节不存在")
@@ -342,13 +389,31 @@ class NovelRepository(
         markBaseContextUsageStale(summary.novelId)
     }
 
-    suspend fun updateSummaryContent(summaryId: String, content: String) = database.withTransaction {
-        require(content.isNotBlank()) { "总结内容不能为空" }
+    suspend fun updateSummaryContent(summaryId: String, content: String) {
         val summary = novelDao.summary(summaryId) ?: error("总结不存在")
-        if (summary.content == content) return@withTransaction
-        check(novelDao.updateSummaryContent(summaryId, content) == 1)
-        markDependentSummaries(summaryId, SummaryStatus.STALE)
+        updateSummary(summaryId, summary.name, content)
+    }
+
+    suspend fun updateSummary(summaryId: String, name: String, content: String) = database.withTransaction {
+        val summary = novelDao.summary(summaryId) ?: error("总结不存在")
+        val prepared = prepareSummaryUpdate(summary, name, content)
+        if (!prepared.nameChanged && !prepared.contentChanged) return@withTransaction
+        if (prepared.contentChanged) {
+            check(novelDao.updateSummaryNameAndContent(summaryId, prepared.updatedSummary.name, prepared.updatedSummary.content, prepared.updatedSummary.updatedAt) == 1)
+            markDependentSummaries(summaryId, SummaryStatus.STALE)
+            markBaseContextUsageStale(summary.novelId)
+        } else {
+            check(novelDao.renameSummary(summaryId, prepared.updatedSummary.name, prepared.updatedSummary.updatedAt) == 1)
+        }
+        novelDao.touchNovel(summary.novelId, prepared.updatedSummary.updatedAt)
+    }
+
+    suspend fun deleteSummary(summaryId: String) = database.withTransaction {
+        val summary = novelDao.summary(summaryId) ?: error("总结不存在")
+        markDependentSummaries(summaryId, SummaryStatus.INVALID)
+        check(novelDao.deleteSummary(summaryId) == 1)
         markBaseContextUsageStale(summary.novelId)
+        novelDao.touchNovel(summary.novelId)
     }
 
     suspend fun copyContextEntry(sourceId: String, targetScope: EntryScope, targetNovelId: String?): ContextEntryEntity =

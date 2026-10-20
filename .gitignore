@@ -37,3 +37,6 @@ playwright-report/
 /DESIGN.md
 /design/
 /design-system/
+.claude/
+graphify-out/cache/
+

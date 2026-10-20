@@ -116,6 +116,9 @@ interface NovelDao {
     @Query("DELETE FROM chapters WHERE id = :chapterId AND content = '' AND contentVersion = 0")
     suspend fun deletePristineChapter(chapterId: String): Int
 
+    @Query("DELETE FROM chapters WHERE id = :chapterId AND deleted = 1")
+    suspend fun permanentlyDeleteChapter(chapterId: String): Int
+
     @Query("SELECT * FROM summaries WHERE novelId = :novelId ORDER BY logicalPosition, createdAt")
     fun observeSummaries(novelId: String): Flow<List<SummaryEntity>>
 
@@ -128,8 +131,14 @@ interface NovelDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertSummary(summary: SummaryEntity)
 
+    @Query("UPDATE summaries SET name = :name, updatedAt = :updatedAt WHERE id = :summaryId")
+    suspend fun renameSummary(summaryId: String, name: String, updatedAt: Long = System.currentTimeMillis()): Int
+
     @Query("UPDATE summaries SET content = :content, contentVersion = contentVersion + 1, updatedAt = :updatedAt WHERE id = :summaryId")
     suspend fun updateSummaryContent(summaryId: String, content: String, updatedAt: Long = System.currentTimeMillis()): Int
+
+    @Query("UPDATE summaries SET name = :name, content = :content, contentVersion = contentVersion + 1, updatedAt = :updatedAt WHERE id = :summaryId")
+    suspend fun updateSummaryNameAndContent(summaryId: String, name: String, content: String, updatedAt: Long = System.currentTimeMillis()): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSummarySources(sources: List<SummarySourceEntity>)

@@ -1,0 +1,374 @@
+{
+  "app/build.gradle.kts": {
+    "mtime": 1792302777.622546,
+    "seen": 1792411078.8158016,
+    "ast_hash": "844b725751e8558fc5808041eac8e804",
+    "semantic_hash": "844b725751e8558fc5808041eac8e804"
+  },
+  "app/schemas/com.ainovel.local.data.local.NovelDatabase/1.json": {
+    "mtime": 1792302777.623546,
+    "seen": 1792411078.8158016,
+    "ast_hash": "b4c81b31c6e8d31ce7243f56d06159f3",
+    "semantic_hash": "b4c81b31c6e8d31ce7243f56d06159f3"
+  },
+  "app/schemas/com.ainovel.local.data.local.NovelDatabase/2.json": {
+    "mtime": 1792302777.623546,
+    "seen": 1792411078.8158016,
+    "ast_hash": "f1bc3abead677b39a33e92a0d77fe8e5",
+    "semantic_hash": "f1bc3abead677b39a33e92a0d77fe8e5"
+  },
+  "app/schemas/com.ainovel.local.data.local.NovelDatabase/3.json": {
+    "mtime": 1792302777.624548,
+    "seen": 1792411078.8158016,
+    "ast_hash": "83d9a523f2f540cc0724d4066b73bb56",
+    "semantic_hash": "83d9a523f2f540cc0724d4066b73bb56"
+  },
+  "app/schemas/com.ainovel.local.data.local.NovelDatabase/4.json": {
+    "mtime": 1792302777.624548,
+    "seen": 1792411078.8158016,
+    "ast_hash": "90203d53fa4a392adcff16b58258828a",
+    "semantic_hash": "90203d53fa4a392adcff16b58258828a"
+  },
+  "app/src/androidTest/java/com/ainovel/local/AppUiTest.kt": {
+    "mtime": 1792302777.624548,
+    "seen": 1792411078.8158016,
+    "ast_hash": "b0ea9458f700fb5ae063d62fe196405e",
+    "semantic_hash": "b0ea9458f700fb5ae063d62fe196405e"
+  },
+  "app/src/androidTest/java/com/ainovel/local/BackupAndAssistantTest.kt": {
+    "mtime": 1792302777.6255488,
+    "seen": 1792411078.8158016,
+    "ast_hash": "d04d4986bc9c3b3077ede0d19d2fec37",
+    "semantic_hash": "d04d4986bc9c3b3077ede0d19d2fec37"
+  },
+  "app/src/androidTest/java/com/ainovel/local/CoreWorkflowTest.kt": {
+    "mtime": 1792302777.6255488,
+    "seen": 1792411078.8158016,
+    "ast_hash": "b4f389054f886fdb09f256516b03849c",
+    "semantic_hash": "b4f389054f886fdb09f256516b03849c"
+  },
+  "app/src/androidTest/java/com/ainovel/local/CoverCropTest.kt": {
+    "mtime": 1792302777.6255488,
+    "seen": 1792411078.8158016,
+    "ast_hash": "0659bcd41690b6a4c7c0c168c4d1f1c1",
+    "semantic_hash": "0659bcd41690b6a4c7c0c168c4d1f1c1"
+  },
+  "app/src/androidTest/java/com/ainovel/local/DatabaseMigrationTest.kt": {
+    "mtime": 1792302777.6255488,
+    "seen": 1792411078.8158016,
+    "ast_hash": "4a6c171eeffb38f2f7b6fd61dc06b8c4",
+    "semantic_hash": "4a6c171eeffb38f2f7b6fd61dc06b8c4"
+  },
+  "app/src/androidTest/java/com/ainovel/local/DeepSeekLiveTest.kt": {
+    "mtime": 1792302777.6255488,
+    "seen": 1792411078.8158016,
+    "ast_hash": "63a13f633a3790947588bc1f4703814e",
+    "semantic_hash": "63a13f633a3790947588bc1f4703814e"
+  },
+  "app/src/androidTest/java/com/ainovel/local/TestFixtures.kt": {
+    "mtime": 1792302777.6265457,
+    "seen": 1792411078.8158016,
+    "ast_hash": "43403d3459720c58cc28fac5f9201d7b",
+    "semantic_hash": "43403d3459720c58cc28fac5f9201d7b"
+  },
+  "app/src/main/java/com/ainovel/local/AppContainer.kt": {
+    "mtime": 1792302777.6265457,
+    "seen": 1792411078.8158016,
+    "ast_hash": "292309574a62865237ad6c730b2f3208",
+    "semantic_hash": "292309574a62865237ad6c730b2f3208"
+  },
+  "app/src/main/java/com/ainovel/local/LocalNovelApplication.kt": {
+    "mtime": 1792302777.6265457,
+    "seen": 1792411078.8158016,
+    "ast_hash": "37db79afb26e1e59ee807fd976d51329",
+    "semantic_hash": "37db79afb26e1e59ee807fd976d51329"
+  },
+  "app/src/main/java/com/ainovel/local/MainActivity.kt": {
+    "mtime": 1792302777.6275444,
+    "seen": 1792411078.8158016,
+    "ast_hash": "e22fcaef106608050e3bb49f2d84bf77",
+    "semantic_hash": "e22fcaef106608050e3bb49f2d84bf77"
+  },
+  "app/src/main/java/com/ainovel/local/data/backup/BackupDao.kt": {
+    "mtime": 1792302777.6275444,
+    "seen": 1792411078.8158016,
+    "ast_hash": "55503c258ad122934396556a0379ed04",
+    "semantic_hash": "55503c258ad122934396556a0379ed04"
+  },
+  "app/src/main/java/com/ainovel/local/data/backup/BackupModels.kt": {
+    "mtime": 1792302777.6275444,
+    "seen": 1792411078.8158016,
+    "ast_hash": "5bb3cba11c61b416f855d4e458bac606",
+    "semantic_hash": "5bb3cba11c61b416f855d4e458bac606"
+  },
+  "app/src/main/java/com/ainovel/local/data/backup/BackupRepository.kt": {
+    "mtime": 1792302777.6275444,
+    "seen": 1792411078.8158016,
+    "ast_hash": "fa7457f0caf42424b2b6459c15ed7a69",
+    "semantic_hash": "fa7457f0caf42424b2b6459c15ed7a69"
+  },
+  "app/src/main/java/com/ainovel/local/data/cover/CoverStorage.kt": {
+    "mtime": 1792302777.6285439,
+    "seen": 1792411078.8158016,
+    "ast_hash": "d8041d22535e6095ec85f19bea93262d",
+    "semantic_hash": "d8041d22535e6095ec85f19bea93262d"
+  },
+  "app/src/main/java/com/ainovel/local/data/local/Converters.kt": {
+    "mtime": 1792302777.6285439,
+    "seen": 1792411078.8158016,
+    "ast_hash": "dcc9e61f62b95dcebeb5a669bbaa8c15",
+    "semantic_hash": "dcc9e61f62b95dcebeb5a669bbaa8c15"
+  },
+  "app/src/main/java/com/ainovel/local/data/local/GenerationDao.kt": {
+    "mtime": 1792302777.6285439,
+    "seen": 1792411078.8158016,
+    "ast_hash": "9dafd2da6110849e6d8229764d4472f9",
+    "semantic_hash": "9dafd2da6110849e6d8229764d4472f9"
+  },
+  "app/src/main/java/com/ainovel/local/data/local/ModelDao.kt": {
+    "mtime": 1792302777.6285439,
+    "seen": 1792411078.8158016,
+    "ast_hash": "5356039237b1e67abe29d9cec7264e8a",
+    "semantic_hash": "5356039237b1e67abe29d9cec7264e8a"
+  },
+  "app/src/main/java/com/ainovel/local/data/local/NovelDao.kt": {
+    "mtime": 1792302777.6285439,
+    "seen": 1792411078.8158016,
+    "ast_hash": "601eb3baca4e5c1284955dbe616abc5e",
+    "semantic_hash": "601eb3baca4e5c1284955dbe616abc5e"
+  },
+  "app/src/main/java/com/ainovel/local/data/local/NovelDatabase.kt": {
+    "mtime": 1792302777.6295443,
+    "seen": 1792411078.8158016,
+    "ast_hash": "1fc668b1c890048c6bdd864040ebb8c7",
+    "semantic_hash": "1fc668b1c890048c6bdd864040ebb8c7"
+  },
+  "app/src/main/java/com/ainovel/local/data/model/Entities.kt": {
+    "mtime": 1792302777.6295443,
+    "seen": 1792411078.8158016,
+    "ast_hash": "030d2167560f436dab3342fbed19f20a",
+    "semantic_hash": "030d2167560f436dab3342fbed19f20a"
+  },
+  "app/src/main/java/com/ainovel/local/data/remote/AnthropicCompatibleAdapter.kt": {
+    "mtime": 1792302777.6295443,
+    "seen": 1792411078.8158016,
+    "ast_hash": "5ccc0dcb5c7a426c419e57b0bfe70508",
+    "semantic_hash": "5ccc0dcb5c7a426c419e57b0bfe70508"
+  },
+  "app/src/main/java/com/ainovel/local/data/remote/DeepSeekAdapter.kt": {
+    "mtime": 1792302777.6305447,
+    "seen": 1792411078.8158016,
+    "ast_hash": "43629c9c74010cdd9d809b2aa9b602c3",
+    "semantic_hash": "43629c9c74010cdd9d809b2aa9b602c3"
+  },
+  "app/src/main/java/com/ainovel/local/data/remote/GeminiAdapter.kt": {
+    "mtime": 1792328152.95465,
+    "seen": 1792411078.8158016,
+    "ast_hash": "0bebca3af034519e75d904585ad728f2",
+    "semantic_hash": "0bebca3af034519e75d904585ad728f2"
+  },
+  "app/src/main/java/com/ainovel/local/data/remote/ProviderAdapter.kt": {
+    "mtime": 1792302777.6305447,
+    "seen": 1792411078.8158016,
+    "ast_hash": "c93591f3c2a4a3d79aaf0c1c0991f8c7",
+    "semantic_hash": "c93591f3c2a4a3d79aaf0c1c0991f8c7"
+  },
+  "app/src/main/java/com/ainovel/local/data/remote/ProviderCatalog.kt": {
+    "mtime": 1792328152.9556513,
+    "seen": 1792411078.8158016,
+    "ast_hash": "137ea54dd2d8289838fcc66937374f2a",
+    "semantic_hash": "137ea54dd2d8289838fcc66937374f2a"
+  },
+  "app/src/main/java/com/ainovel/local/data/remote/ProviderModels.kt": {
+    "mtime": 1792302777.6305447,
+    "seen": 1792411078.8158016,
+    "ast_hash": "736790cc4d821cffb5532cc5cebfea3f",
+    "semantic_hash": "736790cc4d821cffb5532cc5cebfea3f"
+  },
+  "app/src/main/java/com/ainovel/local/data/remote/VertexAiServiceAccountAuth.kt": {
+    "mtime": 1792328152.9556513,
+    "seen": 1792411078.8158016,
+    "ast_hash": "90acc1b87712320867d75b26749e47c6",
+    "semantic_hash": "90acc1b87712320867d75b26749e47c6"
+  },
+  "app/src/main/java/com/ainovel/local/data/security/SecureSecretStore.kt": {
+    "mtime": 1792302777.6305447,
+    "seen": 1792411078.8158016,
+    "ast_hash": "106736fae44b1d40b5054d99a199e5f9",
+    "semantic_hash": "106736fae44b1d40b5054d99a199e5f9"
+  },
+  "app/src/main/java/com/ainovel/local/domain/ContextAssembler.kt": {
+    "mtime": 1792302777.631545,
+    "seen": 1792411078.8158016,
+    "ast_hash": "de2f2cfea867572a4b65a70a2e94008e",
+    "semantic_hash": "de2f2cfea867572a4b65a70a2e94008e"
+  },
+  "app/src/main/java/com/ainovel/local/domain/EpubExporter.kt": {
+    "mtime": 1792328152.9556513,
+    "seen": 1792411078.8158016,
+    "ast_hash": "09faa52776772f93db1de5d75aa6e78f",
+    "semantic_hash": "09faa52776772f93db1de5d75aa6e78f"
+  },
+  "app/src/main/java/com/ainovel/local/domain/GenerationRepository.kt": {
+    "mtime": 1792328152.9566505,
+    "seen": 1792411078.8158016,
+    "ast_hash": "cbe559003a0ff4154877478b14286706",
+    "semantic_hash": "cbe559003a0ff4154877478b14286706"
+  },
+  "app/src/main/java/com/ainovel/local/domain/NovelRepository.kt": {
+    "mtime": 1792328152.9566505,
+    "seen": 1792411078.8158016,
+    "ast_hash": "5b74af40730bacc3947a5c02f90a82e8",
+    "semantic_hash": "5b74af40730bacc3947a5c02f90a82e8"
+  },
+  "app/src/main/java/com/ainovel/local/ui/AppViewModel.kt": {
+    "mtime": 1792328152.9576495,
+    "seen": 1792411078.8158016,
+    "ast_hash": "457323b1cc3a02f5f35babcdc1898085",
+    "semantic_hash": "457323b1cc3a02f5f35babcdc1898085"
+  },
+  "app/src/main/java/com/ainovel/local/ui/LocalNovelApp.kt": {
+    "mtime": 1792302777.6325445,
+    "seen": 1792411078.8158016,
+    "ast_hash": "95341dfd3806e4ee8f87c8e3cd1dae16",
+    "semantic_hash": "95341dfd3806e4ee8f87c8e3cd1dae16"
+  },
+  "app/src/main/java/com/ainovel/local/ui/components/AppComponents.kt": {
+    "mtime": 1792302777.6325445,
+    "seen": 1792411078.8158016,
+    "ast_hash": "9bd40f1413497e7f5c5534ef83e2db19",
+    "semantic_hash": "9bd40f1413497e7f5c5534ef83e2db19"
+  },
+  "app/src/main/java/com/ainovel/local/ui/localization/AppLanguage.kt": {
+    "mtime": 1792328152.9576495,
+    "seen": 1792411078.8158016,
+    "ast_hash": "dfef4dc5bdc2f420feeef31f5aebd493",
+    "semantic_hash": "dfef4dc5bdc2f420feeef31f5aebd493"
+  },
+  "app/src/main/java/com/ainovel/local/ui/screens/AssistantScreen.kt": {
+    "mtime": 1792328152.9576495,
+    "seen": 1792411078.8158016,
+    "ast_hash": "e1c2e4d9e713984381a6c9b82d4d4ef3",
+    "semantic_hash": "e1c2e4d9e713984381a6c9b82d4d4ef3"
+  },
+  "app/src/main/java/com/ainovel/local/ui/screens/ContextScreen.kt": {
+    "mtime": 1792302777.633544,
+    "seen": 1792411078.8158016,
+    "ast_hash": "d1b07dce327595389c291aa57a29a11d",
+    "semantic_hash": "d1b07dce327595389c291aa57a29a11d"
+  },
+  "app/src/main/java/com/ainovel/local/ui/screens/HistoryScreen.kt": {
+    "mtime": 1792302777.633544,
+    "seen": 1792411078.8158016,
+    "ast_hash": "0337a181a7a07eca7aec758d11057ea3",
+    "semantic_hash": "0337a181a7a07eca7aec758d11057ea3"
+  },
+  "app/src/main/java/com/ainovel/local/ui/screens/LibraryScreen.kt": {
+    "mtime": 1792302777.6345444,
+    "seen": 1792411078.8158016,
+    "ast_hash": "7dfa1eda50294954629f03ad11d05a54",
+    "semantic_hash": "7dfa1eda50294954629f03ad11d05a54"
+  },
+  "app/src/main/java/com/ainovel/local/ui/screens/PreparedRequestSheet.kt": {
+    "mtime": 1792302777.6345444,
+    "seen": 1792411078.8158016,
+    "ast_hash": "e3717964a1a17321fe9cc33f5056a10e",
+    "semantic_hash": "e3717964a1a17321fe9cc33f5056a10e"
+  },
+  "app/src/main/java/com/ainovel/local/ui/screens/SettingsScreen.kt": {
+    "mtime": 1792328152.958651,
+    "seen": 1792411078.8158016,
+    "ast_hash": "1c8813b5ce00c0c0a65719b375896bf4",
+    "semantic_hash": "1c8813b5ce00c0c0a65719b375896bf4"
+  },
+  "app/src/main/java/com/ainovel/local/ui/screens/WorkspaceScreen.kt": {
+    "mtime": 1792328152.958651,
+    "seen": 1792411078.8158016,
+    "ast_hash": "e8cff633855709a8278ad3735f46ee86",
+    "semantic_hash": "e8cff633855709a8278ad3735f46ee86"
+  },
+  "app/src/main/java/com/ainovel/local/ui/theme/Color.kt": {
+    "mtime": 1792302777.6355443,
+    "seen": 1792411078.8158016,
+    "ast_hash": "b7c1ff186c5043d11d70e874fc82498b",
+    "semantic_hash": "b7c1ff186c5043d11d70e874fc82498b"
+  },
+  "app/src/main/java/com/ainovel/local/ui/theme/Theme.kt": {
+    "mtime": 1792302777.6355443,
+    "seen": 1792411078.8158016,
+    "ast_hash": "d62ef40f8ed3e22e184c08475cab8ddd",
+    "semantic_hash": "d62ef40f8ed3e22e184c08475cab8ddd"
+  },
+  "app/src/main/java/com/ainovel/local/ui/theme/Type.kt": {
+    "mtime": 1792302777.6355443,
+    "seen": 1792411078.8158016,
+    "ast_hash": "06ddbc038009d892473ac822b63884cb",
+    "semantic_hash": "06ddbc038009d892473ac822b63884cb"
+  },
+  "app/src/test/java/com/ainovel/local/data/remote/VertexAiAndGeminiAdapterTest.kt": {
+    "mtime": 1792328152.9596496,
+    "seen": 1792411078.8158016,
+    "ast_hash": "b3eaefdaff2084d6792fcdde07e46cae",
+    "semantic_hash": "b3eaefdaff2084d6792fcdde07e46cae"
+  },
+  "app/src/test/java/com/ainovel/local/domain/EpubExporterTest.kt": {
+    "mtime": 1792328152.960651,
+    "seen": 1792411078.8158016,
+    "ast_hash": "7db78a05811e174fdd96eb0cdb7457b8",
+    "semantic_hash": "7db78a05811e174fdd96eb0cdb7457b8"
+  },
+  "app/src/test/java/com/ainovel/local/ui/AssistantIdeaWorkflowTest.kt": {
+    "mtime": 1792328152.960651,
+    "seen": 1792411078.8158016,
+    "ast_hash": "4643c6cd9d72eb21ec63643e82127722",
+    "semantic_hash": "4643c6cd9d72eb21ec63643e82127722"
+  },
+  "app/src/test/java/com/ainovel/local/ui/WorkspaceCandidateStateTest.kt": {
+    "mtime": 1792328152.960651,
+    "seen": 1792411078.8158016,
+    "ast_hash": "e386a080cd27ce5ba0e8e2406176477e",
+    "semantic_hash": "e386a080cd27ce5ba0e8e2406176477e"
+  },
+  "build.gradle.kts": {
+    "mtime": 1792302777.6425478,
+    "seen": 1792411078.8158016,
+    "ast_hash": "85ce44bdda4db13c08a16dd08119c806",
+    "semantic_hash": "85ce44bdda4db13c08a16dd08119c806"
+  },
+  "gradlew": {
+    "mtime": 1792302777.6435442,
+    "seen": 1792411078.8158016,
+    "ast_hash": "2499a554dff111d1e3cba902f7147dc0",
+    "semantic_hash": "2499a554dff111d1e3cba902f7147dc0"
+  },
+  "settings.gradle.kts": {
+    "mtime": 1792302777.6435442,
+    "seen": 1792411078.8158016,
+    "ast_hash": "3843b303bf8cd282d4e2af5d3378bcdd",
+    "semantic_hash": "3843b303bf8cd282d4e2af5d3378bcdd"
+  },
+  "README.md": {
+    "mtime": 1792328152.95465,
+    "seen": 1792411078.8158016,
+    "ast_hash": "3e1ab18ba78d4667dfe141093bd4ff5a",
+    "semantic_hash": "3e1ab18ba78d4667dfe141093bd4ff5a"
+  },
+  "README.zh-CN.md": {
+    "mtime": 1792328152.95465,
+    "seen": 1792411078.8158016,
+    "ast_hash": "bafcea98cdc4aff6fc0711db0b3bae45",
+    "semantic_hash": "bafcea98cdc4aff6fc0711db0b3bae45"
+  },
+  "IMG_20260815_002825..jpg": {
+    "mtime": 1792302777.6215463,
+    "seen": 1792411078.8158016,
+    "ast_hash": "897f49a83dfc2bb39ae2953dfebd8dda",
+    "semantic_hash": "897f49a83dfc2bb39ae2953dfebd8dda"
+  },
+  "app/src/main/res/drawable-nodpi/ic_launcher_art.jpg": {
+    "mtime": 1792302777.639545,
+    "seen": 1792411078.8158016,
+    "ast_hash": "897f49a83dfc2bb39ae2953dfebd8dda",
+    "semantic_hash": "897f49a83dfc2bb39ae2953dfebd8dda"
+  }
+}

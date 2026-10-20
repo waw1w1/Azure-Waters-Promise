@@ -81,7 +81,10 @@ fun ContextScreen(viewModel: AppViewModel) {
     val globalWorldbook by viewModel.globalWorldbook.collectAsStateWithLifecycle()
     var tab by remember { mutableIntStateOf(0) }
     var editor by remember { mutableStateOf<ContextEditorState?>(null) }
+    var chapterEditor by remember { mutableStateOf<ChapterEntity?>(null) }
+    var deleteChapterTarget by remember { mutableStateOf<ChapterEntity?>(null) }
     var summaryEditor by remember { mutableStateOf<SummaryEntity?>(null) }
+    var deleteSummaryTarget by remember { mutableStateOf<SummaryEntity?>(null) }
     var deleteTarget by remember { mutableStateOf<ContextEntryEntity?>(null) }
     var showSummaryComposer by remember { mutableStateOf(false) }
     val tabs = listOf("记忆", "预设", "世界书", "灵感素材")
@@ -97,8 +100,11 @@ fun ContextScreen(viewModel: AppViewModel) {
                 chapters = state.chapters,
                 summaries = state.summaries,
                 onToggleChapter = viewModel::toggleChapterContext,
+                onEditChapter = { chapterEditor = it },
+                onDeleteChapter = { deleteChapterTarget = it },
                 onToggleSummary = viewModel::toggleSummaryContext,
                 onEditSummary = { summaryEditor = it },
+                onDeleteSummary = { deleteSummaryTarget = it },
                 onGenerateSummary = {
                     viewModel.loadDefaultSummarySources()
                     showSummaryComposer = true
@@ -150,14 +156,58 @@ fun ContextScreen(viewModel: AppViewModel) {
             },
         )
     }
+    chapterEditor?.let { chapter ->
+        ChapterTitleEditDialog(
+            chapter = chapter,
+            onDismiss = { chapterEditor = null },
+            onSave = { newName ->
+                viewModel.renameChapter(chapter.id, newName)
+                chapterEditor = null
+            },
+        )
+    }
+    deleteChapterTarget?.let { chapter ->
+        AlertDialog(
+            onDismissRequest = { deleteChapterTarget = null },
+            title = { Text("将章节移入回收区？") },
+            text = { Text("章节会暂时收进回收区，正文、版本与创作记录都不会丢失。它将不再参与后续生成，依赖它的总结也会失效；恢复章节后，需要重新整理这些总结。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.softDeleteChapter(chapter.id)
+                        deleteChapterTarget = null
+                    },
+                ) { Text("移入回收区") }
+            },
+            dismissButton = { TextButton(onClick = { deleteChapterTarget = null }) { Text("取消") } },
+        )
+    }
     summaryEditor?.let { summary ->
         SummaryEditDialog(
             summary = summary,
             onDismiss = { summaryEditor = null },
-            onSave = { text ->
-                viewModel.updateSummary(summary.id, text)
+            onSave = { name, text ->
+                viewModel.updateSummary(summary.id, name, text)
                 summaryEditor = null
             },
+        )
+    }
+    deleteSummaryTarget?.let { summary ->
+        AlertDialog(
+            onDismissRequest = { deleteSummaryTarget = null },
+            title = { Text("删除“${summary.name}”？") },
+            text = {
+                Text("删除后，这份总结会从故事记忆中移除；依赖它的后续总结会失效，过去的创作记录仍会保留。")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSummary(summary.id)
+                        deleteSummaryTarget = null
+                    },
+                ) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { deleteSummaryTarget = null }) { Text("取消") } },
         )
     }
     deleteTarget?.let { entry ->
@@ -201,8 +251,11 @@ private fun NodeList(
     chapters: List<ChapterEntity>,
     summaries: List<SummaryEntity>,
     onToggleChapter: (ChapterEntity) -> Unit,
+    onEditChapter: (ChapterEntity) -> Unit,
+    onDeleteChapter: (ChapterEntity) -> Unit,
     onToggleSummary: (SummaryEntity) -> Unit,
     onEditSummary: (SummaryEntity) -> Unit,
+    onDeleteSummary: (SummaryEntity) -> Unit,
     onGenerateSummary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -230,15 +283,18 @@ private fun NodeList(
         }
         itemsIndexed(chapters, key = { _, chapter -> chapter.id }) { index, chapter ->
             val overlap = chapter.includeInContext && chapter.id in coveredIds
+            val title = chapter.name?.ifBlank { null } ?: "未命名章节"
             NodeRow(
                 index = index + 1,
-                title = chapter.name?.ifBlank { null } ?: "未命名章节",
+                title = title,
                 kind = "正文",
                 excerpt = chapter.content,
                 included = chapter.includeInContext,
                 enabled = true,
                 warning = if (overlap) "这段内容已经包含在所选总结中" else null,
                 onToggle = { onToggleChapter(chapter) },
+                onEdit = { onEditChapter(chapter) },
+                onDelete = if (chapters.size > 1) ({ onDeleteChapter(chapter) }) else null,
             )
         }
         items(summaries, key = { it.id }) { summary ->
@@ -256,6 +312,7 @@ private fun NodeList(
                 },
                 onToggle = { onToggleSummary(summary) },
                 onEdit = { onEditSummary(summary) },
+                onDelete = { onDeleteSummary(summary) },
             )
         }
     }
@@ -344,6 +401,7 @@ private fun NodeRow(
     warning: String?,
     onToggle: () -> Unit,
     onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -358,9 +416,9 @@ private fun NodeRow(
                     role = Role.Checkbox,
                     onValueChange = { onToggle() },
                 )
-                .padding(start = 8.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Checkbox(checked = included, onCheckedChange = null, enabled = enabled)
             if (index != null) {
@@ -368,8 +426,14 @@ private fun NodeRow(
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(kind, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Text(kind, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1)
                 }
                 Text(
                     excerpt.ifBlank { "（暂无内容）" },
@@ -380,8 +444,13 @@ private fun NodeRow(
                 )
                 warning?.let { StatusPill(it, StatusTone.WARNING) }
             }
-            onEdit?.let {
-                IconButton(onClick = it) { Icon(Icons.Outlined.EditNote, contentDescription = "编辑 $title") }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                onEdit?.let {
+                    IconButton(onClick = it) { Icon(Icons.Outlined.EditNote, contentDescription = "编辑 $title") }
+                }
+                onDelete?.let {
+                    IconButton(onClick = it) { Icon(Icons.Outlined.DeleteOutline, contentDescription = "删除 $title") }
+                }
             }
         }
     }
@@ -585,7 +654,38 @@ private fun ContextEntryDialog(
 }
 
 @Composable
-private fun SummaryEditDialog(summary: SummaryEntity, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+private fun ChapterTitleEditDialog(
+    chapter: ChapterEntity,
+    onDismiss: () -> Unit,
+    onSave: (String?) -> Unit,
+) {
+    var name by remember(chapter.id, chapter.name) { mutableStateOf(chapter.name.orEmpty()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑章节标题") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("章节名（可以留空）") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name.trim().ifBlank { null }) }) { Text("保存") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    )
+}
+
+@Composable
+private fun SummaryEditDialog(
+    summary: SummaryEntity,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit,
+) {
+    var name by remember(summary.id, summary.name) { mutableStateOf(summary.name) }
     var text by remember(summary.id, summary.content) { mutableStateOf(summary.content) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -594,15 +694,27 @@ private fun SummaryEditDialog(summary: SummaryEntity, onDismiss: () -> Unit, onS
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("修改这份总结后，依赖它的后续总结会提醒你重新整理。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("总结标题") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
                     label = { Text("总结正文") },
-                    minLines = 9,
+                    minLines = 8,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
-        confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { onSave(text.trim()) }) { Text("保存") } },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && text.isNotBlank(),
+                onClick = { onSave(name.trim(), text.trim()) },
+            ) { Text("保存") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
     )
 }

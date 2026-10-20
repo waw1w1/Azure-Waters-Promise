@@ -18,6 +18,7 @@ import com.ainovel.local.data.model.UsageRecordEntity
 import com.ainovel.local.data.model.AssistantSessionEntity
 import com.ainovel.local.data.remote.DeepSeekAdapter
 import com.ainovel.local.data.remote.AnthropicCompatibleAdapter
+import com.ainovel.local.data.remote.GeminiAdapter
 import com.ainovel.local.data.remote.GenerationSettings
 import com.ainovel.local.data.remote.LogicalContextItem
 import com.ainovel.local.data.remote.PreparedRequest
@@ -26,6 +27,7 @@ import com.ainovel.local.data.remote.ProviderException
 import com.ainovel.local.data.remote.ProviderMessage
 import com.ainovel.local.data.remote.ProviderModel
 import com.ainovel.local.data.remote.ProviderCatalog
+import com.ainovel.local.data.remote.VertexAiServiceAccountAuth
 import com.ainovel.local.data.remote.StreamEvent
 import com.ainovel.local.data.remote.StreamResult
 import com.ainovel.local.data.security.SecretStore
@@ -65,10 +67,10 @@ class GenerationRepository(
     private val contextAssembler: ContextAssembler,
     private val json: Json,
     private val adapters: Map<String, ProviderAdapter> = ProviderCatalog.definitions.associate { provider ->
-        provider.id to if (provider.id == "anthropic" || provider.id == "anthropic-compatible") {
-            AnthropicCompatibleAdapter(providerId = provider.id, providerDisplayName = provider.displayName)
-        } else {
-            DeepSeekAdapter(providerId = provider.id, providerDisplayName = provider.displayName)
+        provider.id to when (provider.id) {
+            "anthropic", "anthropic-compatible" -> AnthropicCompatibleAdapter(providerId = provider.id, providerDisplayName = provider.displayName)
+            "gemini", "vertex" -> GeminiAdapter(providerId = provider.id, providerDisplayName = provider.displayName)
+            else -> DeepSeekAdapter(providerId = provider.id, providerDisplayName = provider.displayName)
         }
     },
 ) {
@@ -228,16 +230,29 @@ class GenerationRepository(
         return setting
     }
 
-    private fun manualModelCapabilities(providerId: String, modelId: String): ProviderModel {
-        val lower = modelId.lowercase()
-        val reasoning = lower.contains("reason") || lower.contains("thinking") ||
-            (providerId == "deepseek" && (lower.startsWith("deepseek-v4") || lower == "deepseek-reasoner")) ||
-            (providerId == "openai" && (lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4") || lower.startsWith("gpt-5")))
-        return ProviderModel(
-            id = modelId,
-            supportsReasoning = reasoning,
-            supportsReasoningStrength = providerId == "deepseek" && lower.startsWith("deepseek-v4"),
-        )
+    companion object {
+        fun manualModelCapabilities(providerId: String, modelId: String): ProviderModel {
+            val cleanModel = VertexAiServiceAccountAuth.normalizeVertexModelId(modelId)
+            val lower = cleanModel.lowercase()
+            val isImageModel = lower.contains("imagen") || lower.contains("image")
+            val isReasoningGemini = !isImageModel && (
+                lower.startsWith("gemini-2.5") ||
+                lower.startsWith("gemini-3") ||
+                lower.startsWith("gemini-4") ||
+                Regex("""^gemini-(?:[3-9]|\d{2,})(?:[.-].*|$)""").matches(lower) ||
+                lower.contains("thinking")
+            )
+            val reasoning = (!isImageModel && (lower.contains("reason") || lower.contains("thinking"))) ||
+                (providerId == "deepseek" && (lower.startsWith("deepseek-v4") || lower == "deepseek-reasoner")) ||
+                (providerId == "openai" && (lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4") || lower.startsWith("gpt-5"))) ||
+                isReasoningGemini
+            val reasoningStrength = (providerId == "deepseek" && lower.startsWith("deepseek-v4")) || isReasoningGemini
+            return ProviderModel(
+                id = modelId,
+                supportsReasoning = reasoning,
+                supportsReasoningStrength = reasoningStrength,
+            )
+        }
     }
 
     suspend fun generateBody(

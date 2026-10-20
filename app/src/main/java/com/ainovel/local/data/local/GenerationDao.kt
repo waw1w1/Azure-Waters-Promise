@@ -198,4 +198,7 @@ interface GenerationDao {
 
     @Query("UPDATE acceptance_records SET undoneAt = :undoneAt WHERE id = :id AND undoneAt IS NULL")
     suspend fun markAcceptanceUndone(id: String, undoneAt: Long = System.currentTimeMillis()): Int
+
+    @Query("DELETE FROM acceptance_records WHERE chapterId = :chapterId")
+    suspend fun deleteAcceptancesForChapter(chapterId: String): Int
 }

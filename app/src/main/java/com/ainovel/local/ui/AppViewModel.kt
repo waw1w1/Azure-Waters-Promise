@@ -35,9 +35,12 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.io.File
 import com.ainovel.local.data.backup.BackupRestorePreview
+import com.ainovel.local.domain.EpubExporter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -163,7 +166,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             selected,
             summaryList,
             groupList,
-            candidateList,
+            resolveActiveCandidates(groupList, candidateList),
             usage,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WorkspaceUiState())
@@ -418,6 +421,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         novelRepository.restoreChapter(chapterId)
         selectedChapterId.value = chapterId
         _messages.emit(UiMessage.Info("章节已经回来了；相关总结仍需要重新整理"))
+    }
+
+    fun permanentlyDeleteChapter(chapterId: String) = launchAction("彻底删除章节失败") {
+        flushAutosaveNow()
+        novelRepository.permanentlyDeleteChapter(chapterId)
+        if (selectedChapterId.value == chapterId) selectedChapterId.value = null
+        _messages.emit(UiMessage.Info("章节已彻底删除"))
     }
 
     fun moveChapter(chapterId: String, direction: Int) = launchAction("调整章节顺序失败") {
@@ -767,8 +777,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         novelRepository.setSummaryIncluded(summary.id, !summary.includeInContext)
     }
 
-    fun updateSummary(summaryId: String, content: String) = launchAction("保存总结失败") {
-        novelRepository.updateSummaryContent(summaryId, content)
+    fun updateSummary(summaryId: String, name: String, content: String) = launchAction("保存总结失败") {
+        novelRepository.updateSummary(summaryId, name, content)
+    }
+
+    fun deleteSummary(summaryId: String) = launchAction("删除总结失败") {
+        novelRepository.deleteSummary(summaryId)
+        _messages.emit(UiMessage.Info("总结已删除"))
     }
 
     fun loadDefaultSummarySources() = launchAction("读取总结来源失败") {
@@ -832,6 +847,66 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _messages.emit(UiMessage.Info("这段对话和相关记录已经清空"))
     }
 
+    fun notifyCopiedToClipboard(message: String = "灵感内容已复制到剪贴板") {
+        viewModelScope.launch {
+            _messages.emit(UiMessage.Info(message))
+        }
+    }
+
+    fun saveAssistantIdea(
+        name: String,
+        content: String,
+        scope: EntryScope,
+        type: EntryType = EntryType.WORLDBOOK,
+        enabledForNovel: Boolean = true,
+    ) = launchAction("保存灵感失败") {
+        val entry = buildAssistantIdeaEntry(
+            name = name,
+            content = content,
+            scope = scope,
+            type = type,
+            novelId = selectedNovelId.value,
+            enabledForNovel = enabledForNovel,
+        )
+        novelRepository.upsertContextEntry(entry)
+        _messages.emit(UiMessage.Info(buildAssistantIdeaInfoMessage(scope, type, enabledForNovel)))
+    }
+
+    fun applyAssistantIdeaAsRequirement(
+        requirementText: String,
+        alsoAddToNovelWorldbook: Boolean = false,
+        worldbookName: String = "",
+        navigateToWorkspace: Boolean = true,
+    ) = launchAction("填入本章要求失败") {
+        require(requirementText.trim().isNotEmpty()) { "请输入本次创作要求" }
+        if (alsoAddToNovelWorldbook) {
+            require(worldbookName.trim().isNotEmpty()) { "请输入世界书条目名称" }
+            val novelId = requireNotNull(selectedNovelId.value) { "请先选择作品" }
+            novelRepository.upsertContextEntry(
+                ContextEntryEntity(
+                    type = EntryType.WORLDBOOK,
+                    scope = EntryScope.NOVEL,
+                    novelId = novelId,
+                    name = worldbookName.trim(),
+                    content = requirementText.trim(),
+                    enabled = true,
+                    sortOrder = System.currentTimeMillis(),
+                ),
+            )
+        }
+        creativeRequirement.value = requirementText.trim()
+        candidatePanelExpanded.value = false
+        if (navigateToWorkspace) {
+            destination.value = AppDestination.WORKSPACE
+        }
+        val infoMessage = if (alsoAddToNovelWorldbook) {
+            "已填入本章创作要求，并同步加入本作世界书"
+        } else {
+            "已填入本章创作要求"
+        }
+        _messages.emit(UiMessage.Info(infoMessage))
+    }
+
     fun undoAcceptance(acceptanceId: String) = launchAction("撤销接受失败") {
         when (val result = novelRepository.undoAcceptance(acceptanceId)) {
             com.ainovel.local.domain.UndoAcceptResult.Success -> _messages.emit(UiMessage.Info("这次续写已从正文中撤回，创作记录仍然保留"))
@@ -856,6 +931,51 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             container.backupRepository.createBackup(output, password)
         } ?: error("无法写入选定位置")
         _messages.emit(UiMessage.Info("完整加密备份已创建"))
+    }
+
+    fun exportNovelEpub(output: OutputStream, novelId: String? = selectedNovelId.value) = launchAction("导出 EPUB 失败") {
+        flushAutosaveNow()
+        val targetNovelId = novelId ?: error("请先选择作品")
+        val novel = novelRepository.novel(targetNovelId) ?: error("作品不存在")
+        val chapters = novelRepository.allChapters(targetNovelId)
+        val exportableChapters = EpubExporter.filterExportableChapters(chapters)
+        withContext(Dispatchers.IO) {
+            val coverBytes = novel.coverFileName?.let { fileName ->
+                container.coverStorage.file(fileName)?.takeIf { it.exists() }?.readBytes()
+            }
+            output.use { stream ->
+                EpubExporter.export(
+                    novel = novel,
+                    chapters = exportableChapters,
+                    coverBytes = coverBytes,
+                    output = stream,
+                )
+            }
+        }
+        _messages.emit(UiMessage.Info("EPUB 电子书已导出"))
+    }
+
+    fun exportNovelEpub(uri: Uri, novelId: String? = selectedNovelId.value) = launchAction("导出 EPUB 失败") {
+        flushAutosaveNow()
+        val targetNovelId = novelId ?: error("请先选择作品")
+        val novel = novelRepository.novel(targetNovelId) ?: error("作品不存在")
+        val chapters = novelRepository.allChapters(targetNovelId)
+        val exportableChapters = EpubExporter.filterExportableChapters(chapters)
+        withContext(Dispatchers.IO) {
+            val coverBytes = novel.coverFileName?.let { fileName ->
+                container.coverStorage.file(fileName)?.takeIf { it.exists() }?.readBytes()
+            }
+            val resolver = getApplication<Application>().contentResolver
+            resolver.openOutputStream(uri, "w")?.use { output ->
+                EpubExporter.export(
+                    novel = novel,
+                    chapters = exportableChapters,
+                    coverBytes = coverBytes,
+                    output = output,
+                )
+            } ?: error("无法写入选定位置")
+        }
+        _messages.emit(UiMessage.Info("EPUB 电子书已导出"))
     }
 
     fun previewBackup(
@@ -935,3 +1055,51 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         const val DELETE_CANDIDATE_CANCELLATION = "delete-candidate"
     }
 }
+
+internal fun buildAssistantIdeaEntry(
+    name: String,
+    content: String,
+    scope: EntryScope,
+    type: EntryType = EntryType.WORLDBOOK,
+    novelId: String? = null,
+    enabledForNovel: Boolean = true,
+): ContextEntryEntity {
+    require(name.trim().isNotEmpty()) { "请输入给自己看的名字" }
+    require(content.trim().isNotEmpty()) { "请输入灵感内容" }
+    val resolvedNovelId = if (scope == EntryScope.NOVEL) {
+        requireNotNull(novelId) { "请先选择作品" }
+    } else {
+        null
+    }
+    return ContextEntryEntity(
+        type = type,
+        scope = scope,
+        novelId = resolvedNovelId,
+        name = name.trim(),
+        content = content.trim(),
+        enabled = if (scope == EntryScope.NOVEL) enabledForNovel else false,
+        sortOrder = System.currentTimeMillis(),
+    )
+}
+
+internal fun buildAssistantIdeaInfoMessage(
+    scope: EntryScope,
+    type: EntryType = EntryType.WORLDBOOK,
+    enabledForNovel: Boolean = true,
+): String = when {
+    scope == EntryScope.GLOBAL -> "已收入灵感素材库，可在“记忆 · 灵感素材”中查看"
+    scope == EntryScope.NOVEL && enabledForNovel -> {
+        if (type == EntryType.PRESET) "已加入本作预设，将陪伴下一次创作"
+        else "已加入本作世界书，将陪伴下一次创作"
+    }
+    else -> "已存入本作，暂未启用"
+}
+
+internal fun resolveActiveCandidates(
+    activeGroups: List<CandidateGroupEntity>,
+    candidates: List<CandidateEntity>,
+): List<CandidateEntity> {
+    val activeGroupId = activeGroups.firstOrNull()?.id ?: return emptyList()
+    return candidates.filter { it.candidateGroupId == activeGroupId }
+}
+

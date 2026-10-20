@@ -148,6 +148,7 @@ Keep both the backup file and its password safe. The password is never uploaded 
 - OpenAI
 - Anthropic Claude
 - Google Gemini
+- Google Cloud Vertex AI
 - Kimi / Moonshot
 - Alibaba Cloud Model Studio / Qwen
 - Zhipu GLM
@@ -158,7 +159,7 @@ Keep both the backup file and its password safe. The password is never uploaded 
 - Generic OpenAI-compatible endpoints
 - Generic Anthropic-compatible endpoints
 
-Provider capabilities and API availability may change. Validate the connection with your own account, model, and network environment. If a provider does not expose a model list, you can enter a model ID manually and verify it with a low-cost real request.
+Google Gemini and Google Cloud Vertex AI support both standard API keys and Google Cloud Service Account JSON credentials with automatic OAuth2 token issuance. Provider capabilities and API availability may change. Validate the connection with your own account, model, and network environment. If a provider does not expose a model list, you can enter a model ID manually and verify it with a low-cost real request.
 
 </details>
 

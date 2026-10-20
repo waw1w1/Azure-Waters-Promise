@@ -339,6 +339,48 @@ class CoreWorkflowTest {
     }
 
     @Test
+    fun summaryTitleAndContentEdit_andDeleteSummary_invalidatesDependentsAndRemovesSummary() = runBlocking {
+        RepositoryFixture(listOf(FakeResponse("第一级总结"), FakeResponse("第二级总结"))).use { fixture ->
+            val novel = fixture.configuredNovel()
+            val chapter = fixture.database.novelDao().allChapters(novel.id).single()
+            fixture.novels.saveChapterContent(chapter.id, "第一章正文")
+            fixture.generation.generateSummary(
+                novel.id,
+                listOf(SummarySourceSelection(chapter.id, ContextNodeType.CHAPTER)),
+                SummaryDensity.STANDARD,
+                GenerationSettings(),
+            )
+            val firstCandidate = fixture.database.generationDao().allCandidates().single()
+            val firstSummary = fixture.novels.acceptSummaryCandidate(firstCandidate.id)
+
+            fixture.generation.generateSummary(
+                novel.id,
+                listOf(SummarySourceSelection(firstSummary.id, ContextNodeType.SUMMARY)),
+                SummaryDensity.DETAILED,
+                GenerationSettings(),
+            )
+            val secondCandidate = fixture.database.generationDao().allCandidates().first { it.id != firstCandidate.id }
+            val secondSummary = fixture.novels.acceptSummaryCandidate(secondCandidate.id)
+
+            // Renaming summary title only should not mark dependent summary as STALE
+            fixture.novels.updateSummary(firstSummary.id, "自定义第一卷总结", firstSummary.content)
+            assertEquals("自定义第一卷总结", fixture.database.novelDao().summary(firstSummary.id)?.name)
+            assertEquals(SummaryStatus.VALID, fixture.database.novelDao().summary(secondSummary.id)?.status)
+
+            // Updating summary content should mark dependent summary as STALE
+            fixture.novels.updateSummary(firstSummary.id, "自定义第一卷总结", "更新后的第一级总结内容")
+            assertEquals("更新后的第一级总结内容", fixture.database.novelDao().summary(firstSummary.id)?.content)
+            assertEquals(SummaryStatus.STALE, fixture.database.novelDao().summary(secondSummary.id)?.status)
+
+            // Deleting firstSummary removes it and marks dependent secondSummary as INVALID
+            fixture.novels.deleteSummary(firstSummary.id)
+            assertNull(fixture.database.novelDao().summary(firstSummary.id))
+            assertEquals(SummaryStatus.INVALID, fixture.database.novelDao().summary(secondSummary.id)?.status)
+            assertFalse(fixture.database.novelDao().summary(secondSummary.id)!!.includeInContext)
+        }
+    }
+
+    @Test
     fun assembler_excludesGlobalAndManagementNamesAndUsesRequiredOrder() = runBlocking {
         RepositoryFixture(emptyList()).use { fixture ->
             val novel = fixture.configuredNovel()
@@ -399,6 +441,14 @@ class CoreWorkflowTest {
             fixture.novels.restoreChapter(first.id)
             assertFalse(fixture.novels.chapter(first.id)!!.deleted)
             assertEquals(SummaryStatus.INVALID, fixture.database.novelDao().summary(summary.id)?.status)
+
+            // Cannot permanently delete an active chapter
+            assertTrue(runCatching { fixture.novels.permanentlyDeleteChapter(first.id) }.isFailure)
+
+            // Move to trash and permanently delete
+            fixture.novels.softDeleteChapter(first.id)
+            fixture.novels.permanentlyDeleteChapter(first.id)
+            assertNull(fixture.novels.chapter(first.id))
         }
     }
 

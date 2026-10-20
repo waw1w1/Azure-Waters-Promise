@@ -146,6 +146,7 @@
 - OpenAI
 - Anthropic Claude
 - Google Gemini
+- Google Cloud Vertex AI
 - Kimi / Moonshot
 - 阿里云百炼 / 通义
 - 智谱 GLM
@@ -156,7 +157,7 @@
 - 通用 OpenAI 兼容接口
 - 通用 Anthropic 兼容接口
 
-不同供应商的模型能力和接口开放范围可能变化，建议使用自己的账户、模型和网络环境进行连接确认。若供应商不提供模型列表，可以手动填写模型 ID 并进行低成本真实验证。
+Google Gemini 与 Google Cloud Vertex AI 原生支持 API Key 或直接导入 / 粘贴 Google Cloud 服务账号 (Service Account) JSON 凭证，自动完成 OAuth2 访问令牌签发与端点匹配。不同供应商的模型能力和接口开放范围可能变化，建议使用自己的账户、模型和网络环境进行连接确认。若供应商不提供模型列表，可以手动填写模型 ID 并进行低成本真实验证。
 
 </details>
 
